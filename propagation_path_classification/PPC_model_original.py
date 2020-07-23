@@ -65,7 +65,7 @@ def compute_metrics(pred_test, y_test):
     acc = accuracy_score(lt, lp)
     f1s = []
     for pos_label in range(np.unique(lt).size):
-        f1s.append(f1_score(lp, lt, labels=[pos_label], average='micro'))
+        f1s.append(f1_score(lp, lt, labels=[pos_label], average='macro'))
 
     res = [acc, *f1s, auc]
 
@@ -91,12 +91,12 @@ def model_evaluate(model, x, y):
 def main():
     project_folder = 'datasets/twitter15/'
     # seq_len = 35
-    epochs = 200
+    epochs = 100
     batch_size = 128
     nb_sample = 10
     seq_lens = [100]
-    data_opt = 'twitter16'
-    output_size = 4
+    data_opt = 'fake_news_1000_retweet_path_by_date'
+    output_size = 2
 
     X = np.load(f'processed_datasets/{data_opt}/X.npy')
     y_origin = np.load(f'processed_datasets/{data_opt}/y.npy')
