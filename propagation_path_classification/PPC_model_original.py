@@ -95,7 +95,8 @@ def main():
     batch_size = 128
     nb_sample = 10
     seq_lens = [100]
-    data_opt = 'fake_news_1000_retweet_path_by_date'
+    # data_opt = 'fake_news_1000_retweet_path_by_date'
+    data_opt = 'fake_news_1000_retweet_path_by_friend_con'
     output_size = 2
 
     X = np.load(f'processed_datasets/{data_opt}/X.npy')

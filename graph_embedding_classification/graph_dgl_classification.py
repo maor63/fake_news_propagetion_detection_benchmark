@@ -20,8 +20,8 @@ import graph_embedding_classification
 class Classifier(nn.Module):
     def __init__(self, in_dim, hidden_dim, n_classes):
         super(Classifier, self).__init__()
-        self.conv1 = TAGConv(in_dim, hidden_dim,)
-        # self.conv2 = GraphConv(hidden_dim, hidden_dim)
+        self.conv1 = GraphConv(in_dim, hidden_dim,)
+        self.conv2 = GraphConv(hidden_dim, hidden_dim)
         self.classify = nn.Linear(hidden_dim, n_classes)
 
     def forward(self, g: dgl.DGLGraph):
@@ -31,7 +31,7 @@ class Classifier(nn.Module):
         # E = torch.zeros(len(g.edges))
         # Perform graph convolution and activation function.
         h = F.relu(self.conv1(g, h))
-        # h = F.relu(self.conv2(g, h))
+        h = F.relu(self.conv2(g, h))
         g.ndata['h'] = h
         # Calculate graph representation by averaging all the node representations.
         hg = dgl.mean_nodes(g, 'h')
@@ -54,21 +54,22 @@ def collate(graphs, labels, batch_size):
 def main():
     # dataset_sufix = 'fake_news_17k_prop_data'
     # dataset_sufix = 'fake_news_1000_retweet_path_by_date'
-    dataset_sufix = 'twitter16'
+    dataset_sufix = 'fake_news_1000_retweet_path_by_friend_con'
+    # dataset_sufix = 'twitter16'
     # dataset_sufix = 'twitter15'
     path_len = 100
     time_limit = 24 * 60  # None for all
-    possible_labels = ['unverified', 'non-rumor', 'true', 'false']
-    # possible_labels = [False, True]
+    # possible_labels = ['unverified', 'non-rumor', 'true', 'false']
+    possible_labels = [False, True]
     # possible_labels = ['non-rumor', 'false']
     # false_labels = {'false'}
     # false_labels = {False}
     # true_labels = {'non-rumor'}
     # true_labels = {True}
-    # tree_delimiter = '-'
-    tree_delimiter = '->'
-    # user_id_field = 'author_guid'
-    user_id_field = 'author_osn_id'
+    tree_delimiter = '-'
+    # tree_delimiter = '->'
+    user_id_field = 'author_guid'
+    # user_id_field = 'author_osn_id'
 
     output_features_path = Path(os.path.join('processed_datasets/', dataset_sufix))
     data_path = Path(os.path.join('datasets/', dataset_sufix))
@@ -77,10 +78,12 @@ def main():
 
     undirected_graphs = [g.to_undirected() for g in graphs]
     ##############################################
-    graphs_train, graphs_test, y_train, y_test = train_test_split(graphs, y, test_size=0.2)
 
-    train_dgl_graphs = graphs_to_dgl_graphs(graphs_train)
-    test_dgl_graphs = graphs_to_dgl_graphs(graphs_test)
+    graphs, y = graphs_to_dgl_graphs(graphs, y)
+    train_dgl_graphs, test_dgl_graphs, y_train, y_test = train_test_split(graphs, y, test_size=0.2)
+
+    # train_dgl_graphs = graphs_to_dgl_graphs(graphs_train)
+    # test_dgl_graphs = graphs_to_dgl_graphs(graphs_test)
 
     n_classes = len(label_encoder.classes_)
     model = Classifier(1, 64, n_classes)
@@ -88,7 +91,7 @@ def main():
     optimizer = optim.Adam(model.parameters(), lr=0.01)
     model.train()
 
-    pos = np.arange(len(graphs_train))
+    pos = np.arange(len(train_dgl_graphs))
 
     epoch_losses = []
     for epoch in range(80):
@@ -129,17 +132,21 @@ def main():
         (test_Y == argmax_Y.float()).sum().item() / len(test_Y) * 100))
 
 
-def graphs_to_dgl_graphs(graphs):
+def graphs_to_dgl_graphs(graphs, y):
     dgl_graphs = []
-    for g in graphs:
+    new_y = []
+    for g, label in zip(graphs, y):
         assert isinstance(g, nx.DiGraph)
-        dgl_g = dgl.DGLGraph()
-        nodes = list(g.nodes())
-        u, v = list(zip(*g.edges()))
-        dgl_g.add_nodes(len(nodes))
-        dgl_g.add_edges(u, v)
-        dgl_graphs.append(dgl_g)
-    return np.array(dgl_graphs)
+        if len(list(g.edges())) > 0:
+            dgl_g = dgl.DGLGraph()
+            nodes = list(g.nodes())
+            dgl_g.add_nodes(len(nodes))
+
+            u, v = list(zip(*g.edges()))
+            dgl_g.add_edges(u, v)
+            dgl_graphs.append(dgl_g)
+            new_y.append(label)
+    return np.array(dgl_graphs), np.array(new_y)
 
 
 if __name__ == '__main__':
