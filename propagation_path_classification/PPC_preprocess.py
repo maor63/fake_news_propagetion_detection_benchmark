@@ -23,10 +23,14 @@ def get_retweet_path(tweet_propagation_path, propagation_size, tree_delimiter='-
     return user_ids
 
 
-def get_label_dict(label_file, title=''):
+def get_label_dict(label_file, title='', posts_df=None):
     labels_df = pd.read_csv(label_file, sep=':', header=None, names=['label', 'tweet_id'])
-    labels_df.groupby('label')['tweet_id'].count().rename({'tweet_id': 'count'}).plot.pie(title=title, autopct='%.3f')
-    plt.show()
+    # if posts_df is not None:
+    #     df = posts_df.merge(labels_df, left_on='post_id', right_on='tweet_id')
+    #     res = df.groupby('domain')['verdict'].sum()
+
+    # labels_df.groupby('label')['tweet_id'].count().rename({'tweet_id': 'count'}).plot.pie(title=title, autopct='%')
+    # plt.show()
     print(labels_df.groupby('label')['tweet_id'].count())
     label_dict = dict(zip(labels_df['tweet_id'], labels_df['label']))
     return label_dict
@@ -79,19 +83,21 @@ def extract_user_features(users_df, user_id_field='author_osn_id'):
 def main():
     # dataset_sufix = 'fake_news_17k_prop_data'
     # dataset_sufix = 'fake_news_1000_retweet_path_by_date'
-    dataset_sufix = 'twitter16'
+    dataset_sufix = 'fake_news_1000_retweet_path_by_friend_con'
+    # dataset_sufix = 'twitter16'
     path_len = 100
     time_limit = 24 * 60 # None for all
-    possible_labels = ['unverified', 'non-rumor', 'true', 'false']
+    # possible_labels = ['unverified', 'non-rumor', 'true', 'false']
+    possible_labels = [False, True]
     # possible_labels = ['non-rumor', 'false']
     false_labels = {'false'}
     # false_labels = {False}
     true_labels = {'non-rumor'}
     # true_labels = {True}
-    # tree_delimiter = '-'
-    tree_delimiter = '->'
-    # user_id_field = 'author_guid'
-    user_id_field = 'author_osn_id'
+    tree_delimiter = '-'
+    # tree_delimiter = '->'
+    user_id_field = 'author_guid'
+    # user_id_field = 'author_osn_id'
 
     output_features_path = Path(os.path.join('processed_datasets/', dataset_sufix))
     data_path = Path(os.path.join('datasets/', dataset_sufix))
@@ -107,6 +113,9 @@ def main():
     print()
     users_features_df = pd.concat(users_features_dfs)
     users_features_df = users_features_df.loc[~users_features_df.index.duplicated(keep='first')]
+
+    # posts_file_name = list(filter(lambda name: 'posts' in name, os.listdir(data_path)))[0]
+    # posts_df = pd.read_csv(data_path / posts_file_name)
     label_dict = get_label_dict(data_path / 'label.txt', title=dataset_sufix)
 
     y = []

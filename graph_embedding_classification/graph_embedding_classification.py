@@ -8,6 +8,9 @@ import time
 import matplotlib.pyplot as plt
 import networkx as nx
 from karateclub import FeatherGraph, Graph2Vec, FGSD, GL2Vec, SF, NetLSD, GeoScattering
+from keras import *
+from keras.layers import *
+from keras.utils import to_categorical
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.model_selection import cross_val_score, KFold, StratifiedKFold
@@ -26,6 +29,8 @@ def get_retweet_graph(tweet_propagation_path, propagation_size, tree_delimiter='
     source_authors = node_to_idx.transform(source_authors)
     target_authors = node_to_idx.transform(target_authors)
     edges = list(zip(source_authors, target_authors))
+    if len(edges) < len(target_authors):
+        pass
 
     root_author = target_authors[0]
     root_egdes = [(root_author, src) for src in source_authors[1:]]
@@ -131,11 +136,20 @@ def convert_trees_to_graphs(data_path, dataset_sufix, path_len, possible_labels,
     return graphs, label_encoder, y
 
 
+def build_model(input_size, output_size):
+    input_f = Input(shape=(input_size, ), dtype='float32', name='input_f')
+    rc = Dense(32, activation='relu', kernel_regularizer=regularizers.l2(0.000001))(input_f)
+    # rc = Dropout(0.5)(rc)
+    output_f = Dense(output_size, activation='softmax', name='output_f')(rc)
+    model = Model(inputs=[input_f], outputs=[output_f])
+    return model
+
+
 def main():
     # dataset_sufix = 'fake_news_17k_prop_data'
     # dataset_sufix = 'fake_news_1000_retweet_path_by_date'
-    # dataset_sufix = 'twitter16'
-    dataset_sufix = 'twitter15'
+    dataset_sufix = 'twitter16'
+    # dataset_sufix = 'twitter15'
     path_len = 100
     time_limit = 24 * 60  # None for all
     possible_labels = ['unverified', 'non-rumor', 'true', 'false']
@@ -160,14 +174,14 @@ def main():
 
     for graph_emb in [
         # FeatherGraph,
-        # Graph2Vec,
-        FGSD,
+        Graph2Vec,
+        # FGSD,
         # # GL2Vec,
         # SF,
         # NetLSD,
         # GeoScattering
     ]:
-        model = graph_emb(hist_bins=100, hist_range=50)
+        model = graph_emb()
         model.fit(undirected_graphs)
         X = model.get_embedding()
 
@@ -177,11 +191,16 @@ def main():
         macro_recall = []
         accs = []
         skf = StratifiedKFold(5)
+        epochs = 10
+        batch_size = 10
         for train_index, test_index in skf.split(X, y):
-            bst = xgb.XGBClassifier(max_depth=6, learning_rate=0.3, n_estimators=100)
-            bst.fit(X[train_index], y[train_index])
-            y_pred = bst.predict(X[test_index])
-            report_dict = classification_report(y[test_index], y_pred, output_dict=True)
+            model = build_model(X.shape[1], len(np.unique(y)))
+            model.compile(loss={'output_f': 'categorical_crossentropy'}, optimizer='adam', metrics=['accuracy'])
+            # bst = xgb.XGBClassifier(max_depth=6, learning_rate=0.3, n_estimators=100)
+            model.fit(X[train_index], to_categorical(y[train_index]), epochs=epochs, batch_size=batch_size,
+              validation_split=0.1, verbose=2)
+            y_pred = model.predict(X[test_index])
+            report_dict = classification_report(y[test_index], y_pred.argmax(axis=1), output_dict=True)
             print(report_dict)
 
             f1s.append([report_dict[str(pos_label)]['f1-score'] for pos_label in range(len(label_encoder.classes_))])
