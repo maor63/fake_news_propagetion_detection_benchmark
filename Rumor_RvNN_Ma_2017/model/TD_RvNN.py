@@ -3,8 +3,8 @@ __doc__ = """Tree GRU aka Recursive Neural Networks."""
 import numpy as np
 import theano
 from theano import tensor as T
-#from collections import OrderedDict
-from theano.compat.python2x import OrderedDict
+from collections import OrderedDict
+# from theano.compat.python2x import OrderedDict
 from theano.tensor.signal.pool import pool_2d
 
 

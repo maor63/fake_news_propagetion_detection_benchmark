@@ -182,7 +182,8 @@ class AttentionGRU(nn.Module):
         h_tilde = attn.mm(child_h)
         #gru
         self.norm(h_tilde)
-        z_bu = F.sigmoid(parent_xe.mm(self.W_z_bu.t()) + h_tilde.mm(self.U_z_bu.t()) + self.b_z_bu)
+        z_bu = F.sigmoid(parent_xe.mm(self.W_
+        z_bu.t()) + h_tilde.mm(self.U_z_bu.t()) + self.b_z_bu)
         r_bu = F.sigmoid(parent_xe.mm(self.W_r_bu.t()) + h_tilde.mm(self.U_r_bu.t()) + self.b_r_bu)
         c = F.tanh(parent_xe.mm(self.W_h_bu.t()) + (r_bu*h_tilde).mm(self.U_h_bu.t()) + self.b_h_bu)
         h_bu = z_bu * h_tilde + (1 - z_bu) * self.drop(c)

@@ -4,10 +4,10 @@ import os
 import json
 import tqdm
 
-api = twitter.api.Api(consumer_key='ACE4GN7LOv1C5isH1e18VRmeD',
-                      consumer_secret='zgKhzxxMph36Bt6jnIrr7ysfvnEaujdmr0pS6jpezbmkWxhIuX',
-                      access_token_key='917033232587214848-18iztS2rsFjIOUg1OrmnOR8kQxz9xIk',
-                      access_token_secret='soS2qjaMG1fgsyM3afh8wnSns0ki4Cu5BIG2uSwkcXfzB',
+api = twitter.api.Api(consumer_key='consumer_key',
+                      consumer_secret='consumer_secret',
+                      access_token_key='access_token_key',
+                      access_token_secret='access_token_secret',
                       sleep_on_rate_limit=True)
 
 output_path = 'Data/Twitter/'

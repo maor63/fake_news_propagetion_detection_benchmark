@@ -9,6 +9,9 @@
 """
 
 import sys
+# import importlib
+# importlib.reload (sys)
+# sys.setdefaultencoding('utf-8')
 import os
 
 from Rumor_GAN_Ma_2019.model.model_GAN_RNN import GAN
@@ -36,18 +39,18 @@ obj = "twitter"  # "test-" # dataset
 fold = "0"
 
 unit = "GAN-RNN-" + obj + str(fold)
-modelPath = "../param/param-" + unit + ".npz"
+modelPath = "Rumor_GAN_Ma_2019/param/param-" + unit + ".npz"
 
 unit_dis = "RNN-" + obj + str(fold)
-modelPath_dis = "../param/param-" + unit_dis + ".npz"
+modelPath_dis = "Rumor_GAN_Ma_2019/param/param-" + unit_dis + ".npz"
 
 unit_pre = "GAN-RNN-pre-" + obj + str(fold)
-modelPath_pre = "../param/param-" + unit_pre + ".npz"
+modelPath_pre = "Rumor_GAN_Ma_2019/param/param-" + unit_pre + ".npz"
 
-trainPath = "../nfold/TrainSet_" + obj + fold + ".txt"
-testPath = "../nfold/TestSet_" + obj + fold + ".txt"
-labelPath = "../resource/" + obj + "_labels.txt"
-textPath = '../resource/' + obj + '.vol_5000.txt'
+trainPath = "Rumor_GAN_Ma_2019/nfold/TrainSet_" + obj + fold + ".txt"
+testPath = "Rumor_GAN_Ma_2019/nfold/TestSet_" + obj + fold + ".txt"
+labelPath = "Rumor_GAN_Ma_2019/resource/" + obj + "_labels.txt"
+textPath = 'Rumor_GAN_Ma_2019/resource/' + obj + '.vol_5000.txt'
 
 
 # textPath = '../resource/'+obj+'_new.words.ABS.vol_5000_intv_40.txt'
@@ -84,8 +87,8 @@ def dic2matrixNorm(dicW):
     return X
 
 
-labelset_true = ['true', 'non-rumour']
-labelset_false = ['false', 'rumour']
+labelset_true = ['true', 'non-rumor']
+labelset_false = ['false', 'rumor']
 
 
 def loadLabel(label):
@@ -116,7 +119,7 @@ def loadData():
         line = line.rstrip()
         if len(line.split('\t')) < 3: continue
         eid, ts, Vec = line.split('\t')[0], int(line.split('\t')[1]), line.split('\t')[2].split(' ')
-        if textDic.has_key(eid):
+        if eid in textDic:
             textDic[eid][ts] = Vec
         else:
             textDic[eid] = {ts: Vec}
@@ -128,8 +131,8 @@ def loadData():
     for eid in open(trainPath):
         # if c > 8: break
         eid = eid.rstrip()
-        if not labelDic.has_key(eid): continue
-        if not textDic.has_key(eid): continue
+        if not eid in labelDic: continue
+        if not eid in textDic: continue
         ## 1. load label
         label = labelDic[eid]
         if label in labelset_true: index_true.append(c)
@@ -150,8 +153,8 @@ def loadData():
     for eid in open(testPath):
         # if c > 4: break
         eid = eid.rstrip()
-        if not labelDic.has_key(eid): continue
-        if not textDic.has_key(eid): continue
+        if not eid in labelDic: continue
+        if not eid in textDic: continue
         ## 1. load label        
         label = labelDic[eid]
         y, y_gen = loadLabel(label)
@@ -179,30 +182,32 @@ GANmodel = GAN(vocabulary_size, hidden_dim, Nclass)
 t1 = time.time()
 print('GAN model established,', (t1 - t0) / 60)
 
-## 3. pre-train or load model
-if os.path.isfile(modelPath):
-    GANmodel = load_model(modelPath, GANmodel)
-    lr_d, lr_g = 0.0001, 0.0001
-else:
-    # pre train classifier
-    if os.path.isfile(modelPath_dis):
-        GANmodel = load_model_dis(modelPath_dis, GANmodel)
-        # lr_d = 0.005
-    else:
-        pre_train_Discriminator(GANmodel, x_word_train, y_train, x_word_test, y_test, lr_d, Nepoch_D, modelPath_dis)
-    # exit(0)
-    # pre train generator
-    if os.path.isfile(modelPath_pre):
-        GANmodel = load_model(modelPath_pre, GANmodel)
-        # pre_train_Generator('rn', GANmodel, x_word_train, x_index_train, index_false, Len_train, y_train, yg_train, lr_g, Nepoch_G, modelPath_pre, floss)
+# ## 3. pre-train or load model
+# if os.path.isfile(modelPath):
+#     GANmodel = load_model(modelPath, GANmodel)
+#     lr_d, lr_g = 0.0001, 0.0001
+# else:
+#     # pre train classifier
+#     if os.path.isfile(modelPath_dis):
+#         GANmodel = load_model_dis(modelPath_dis, GANmodel)
+#         # lr_d = 0.005
+#     else:
+#         pre_train_Discriminator(GANmodel, x_word_train, y_train, x_word_test, y_test, lr_d, Nepoch_D, modelPath_dis)
+#     # exit(0)
+#     # pre train generator
+if os.path.isfile(modelPath_pre):
+    GANmodel = load_model(modelPath_pre, GANmodel)
+    # pre_train_Generator('rn', GANmodel, x_word_train, x_index_train, index_false, Len_train, y_train, yg_train, lr_g, Nepoch_G, modelPath_pre, floss)
 
-        # lr_g = 0.005
-    else:
-        pre_train_Generator('nr', GANmodel, x_word_train, index_true, Len_train, y_train, yg_train, lr_g, Nepoch_G,
-                            modelPath_pre)
-        pre_train_Generator('rn', GANmodel, x_word_train, index_false, Len_train, y_train, yg_train, lr_g, Nepoch_G,
-                            modelPath_pre)
-        # lr_g = 0.0001'''
+    # lr_g = 0.005
+else:
+    pre_train_Discriminator(GANmodel, x_word_train, y_train, x_word_test, y_test, lr_d, Nepoch_D, modelPath_dis)
+    
+    pre_train_Generator('nr', GANmodel, x_word_train, index_true, Len_train, y_train, yg_train, lr_g, Nepoch_G,
+                        modelPath_pre)
+    pre_train_Generator('rn', GANmodel, x_word_train, index_false, Len_train, y_train, yg_train, lr_g, Nepoch_G,
+                        modelPath_pre)
+    # lr_g = 0.0001'''
 
 train_Gen_Dis(GANmodel, x_word_train, Len_train, y_train, yg_train, index_true, index_false, x_word_test, y_test, lr_g,
               lr_d, Nepoch, modelPath)

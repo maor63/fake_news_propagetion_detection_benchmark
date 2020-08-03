@@ -33,16 +33,16 @@ tag = ""
 vocabulary_size = 5000
 hidden_dim = 100
 Nclass = 4
-Nepoch = 50
+Nepoch = 150
 lr = 0.005
 
 unit="BU_RvNN-"+obj+str(fold)+'-vol.'+str(vocabulary_size)+tag
 
-treePath = '../resource/data.BU_RvNN.vol_'+str(vocabulary_size)+tag+'.txt' 
+treePath = 'Rumor_RvNN_Ma_2017/resource/data.BU_RvNN.vol_'+str(vocabulary_size)+tag+'.txt'
 
-trainPath = "../nfold/RNNtrainSet_"+obj+str(fold)+"_tree.txt" 
-testPath = "../nfold/RNNtestSet_"+obj+str(fold)+"_tree.txt"
-labelPath = "../resource/"+obj+"_label_All.txt"
+trainPath = "Rumor_RvNN_Ma_2017/nfold/RNNtrainSet_"+obj+str(fold)+"_tree.txt"
+testPath = "Rumor_RvNN_Ma_2017/nfold/RNNtestSet_"+obj+str(fold)+"_tree.txt"
+labelPath = "Rumor_RvNN_Ma_2017/resource/"+obj+"_label_All.txt"
 
 ################################### tools #####################################
 def str2matrix(Str, MaxL): # str = index:wordfreq index:wordfreq
@@ -181,6 +181,7 @@ tree_train, word_train, index_train, y_train, tree_test, word_test, index_test, 
 #                 )
 # print("tree_train:", max_degree)
 ## 2. ini RNN model
+print(f'use GPU {torch.cuda.is_available()}')
 t0 = time.time()
 # model = BU_RvNN.RvNN(vocabulary_size, hidden_dim, Nclass) #GRU 改用maxpooling之后，twitter16上的最好效果达到81.6%
 model = BU_Transformer.AttentionGRU(vocabulary_size, hidden_dim, Nclass)  #AttentionGRU,最好效果７２左右
@@ -201,7 +202,7 @@ print('Recursive model established,', (t1-t0)/60)
 ## 3. looping SGD
 
 paras = [{'param':parameter, 'lr':0.1, 'weight_decay':0.001} if not 'E_bu' in name else {'param':parameter, 'lr':0.05} for name, parameter in model.named_parameters()]
-optimizer = optim.Adagrad(model.parameters())
+optimizer = optim.Adagrad(model.parameters(), lr=0.01)
 losses_5, losses = [], []
 num_examples_seen = 0
 batch_size = 5
@@ -224,12 +225,13 @@ for epoch in range(Nepoch):
         optimizer.step()
         losses.append(float(loss.data))
         num_examples_seen += 1
-        print("epoch=%d: idx=%d,loss=%f"%( epoch, i, np.mean(losses)))
+        # print("epoch=%d: idx=%d,loss=%f"%( epoch, i, np.mean(losses)))
+    print("epoch=%d: loss=%f" % (epoch, np.mean(losses)))
     sys.stdout.flush()
 
     model.eval()
     ## cal loss & evaluate
-    if epoch % 1 == 0:
+    if epoch % 5 == 0:
        losses_5.append((num_examples_seen, np.mean(losses))) 
        time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
        print("%s: Loss after num_examples_seen=%d epoch=%d: %f" % (time, num_examples_seen, epoch, np.mean(losses)))
@@ -241,12 +243,12 @@ for epoch in range(Nepoch):
        if best_test_acc < res[1]:
            best_test_acc = res[1]
            print("best_performance:")
-           torch.save(model, "../resource/AttnGRU_T_%.3f.pkl"%best_test_acc)
+           torch.save(model, "Rumor_RvNN_Ma_2017/resource/AttnGRU_T_%.3f.pkl"%best_test_acc)
        print('results:', res)
        sys.stdout.flush()
        ## Adjust the learning rate if loss increases
        if len(losses_5) > 1 and losses_5[-1][1] > losses_5[-2][1]:
-          lr = lr * 0.5   
+          lr = lr * 0.5
           print("Setting learning rate to %f" % lr)
           sys.stdout.flush()
     sys.stdout.flush()
